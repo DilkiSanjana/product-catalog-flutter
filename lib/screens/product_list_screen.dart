@@ -1,10 +1,13 @@
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/product_provider.dart';
+import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
-import 'dart:async';
+import 'cart_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -20,11 +23,9 @@ class _ProductListScreenState
       ScrollController();
 
   final TextEditingController _searchController =
-    TextEditingController();
+      TextEditingController();
 
   Timer? _debounce;
-
-  
 
   @override
   void initState() {
@@ -38,51 +39,91 @@ class _ProductListScreenState
     });
   }
 
+  void _onSearchChanged(String query) {
+    _debounce?.cancel();
+
+    _debounce = Timer(
+      const Duration(milliseconds: 500),
+      () {
+        if (!mounted) return;
+
+        context.read<ProductProvider>().searchProducts(query);
+      },
+    );
+  }
+
   @override
-  void dispose() {_debounce?.cancel();
-  _searchController.dispose();
-  _scrollController.dispose();
-  super.dispose();}
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Product Catalog'),
-  centerTitle: true,
-  bottom: PreferredSize(
-    preferredSize: const Size.fromHeight(65),
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        decoration: InputDecoration(
-          hintText: 'Search products...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              _searchController.clear();
-              _onSearchChanged('');
+      appBar: AppBar(
+        title: const Text('Product Catalog'),
+        actions: [
+          Consumer<CartProvider>(
+            builder: (context, cartProvider, child) {
+              return IconButton(
+                icon: Badge(
+                  label: Text('${cartProvider.itemCount}'),
+                  isLabelVisible: cartProvider.itemCount > 0,
+                  child: const Icon(Icons.shopping_cart),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CartScreen(),
+                    ),
+                  );
+                },
+              );
             },
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(65),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search products...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                  },
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Theme.of(context)
+                    .colorScheme
+                    .surface,
+              ),
+            ),
           ),
-          filled: true,
         ),
       ),
-    ),
-  ),),
       body: _buildBody(provider),
     );
   }
 
   Widget _buildBody(ProductProvider provider) {
     if ((provider.isLoading || provider.isSearching) &&
-    provider.products.isEmpty) {
+        provider.products.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(),
       );
@@ -122,38 +163,29 @@ class _ProductListScreenState
         childAspectRatio: 0.68,
       ),
       itemCount: provider.products.length +
-          (provider.isLoadingMore || provider.paginationError != null ? 1 : 0),
-      itemBuilder: (context, index) { 
+          (provider.isLoadingMore ||
+                  provider.paginationError != null
+              ? 1
+              : 0),
+      itemBuilder: (context, index) {
         if (index < provider.products.length) {
-        return ProductCard(
-          product: provider.products[index],
+          return ProductCard(
+            product: provider.products[index],
+          );
+        }
+
+        if (provider.paginationError != null) {
+          return Center(
+            child: TextButton(
+              onPressed: () => provider.retryLoadMore(),
+              child: const Text('Failed to load. Retry'),
+            ),
+          );
+        }
+
+        return const Center(
+          child: CircularProgressIndicator(),
         );
-      }
-
-      if (provider.paginationError != null) {
-        return Center(
-          child: TextButton(
-            onPressed: () => provider.retryLoadMore(),
-            child: const Text('Failed to load. Retry'),
-          ),
-        );
-      }
-
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    },
-    );
-  }
-  void _onSearchChanged(String query) {
-  _debounce?.cancel();
-
-  _debounce = Timer(
-    const Duration(milliseconds: 500),
-    () {
-      if (!mounted) return;
-
-      context.read<ProductProvider>().searchProducts(query);
       },
     );
   }

@@ -23,7 +23,7 @@ void main() {
           )..loadInitialProducts(),
         ),
         ChangeNotifierProvider(
-          create: (_) => CartProvider(),
+          create: (_) => CartProvider()..loadCart(),
         ),
       ],
       child: const MyApp(),
