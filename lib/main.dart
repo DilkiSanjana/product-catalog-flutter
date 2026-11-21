@@ -6,6 +6,7 @@ import 'providers/product_provider.dart';
 import 'repositories/product_repository.dart';
 import 'services/product_api_service.dart';
 import 'screens/product_list_screen.dart';
+import 'providers/cart_provider.dart';
 
 void main() {
   final apiService = ProductApiService();
@@ -20,6 +21,9 @@ void main() {
           create: (_) => ProductProvider(
             repository: repository,
           )..loadInitialProducts(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => CartProvider(),
         ),
       ],
       child: const MyApp(),

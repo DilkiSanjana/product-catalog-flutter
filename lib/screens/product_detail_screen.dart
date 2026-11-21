@@ -1,8 +1,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 
 import '../models/product.dart';
+import '../providers/cart_provider.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   final Product product;
@@ -77,11 +79,12 @@ class ProductDetailScreen extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: product.stock > 0
                     ? () {
+                        context.read<CartProvider>().addToCart(product);
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text(
-                              'Cart functionality will be added next!',
-                            ),
+                            content: Text('Product added to cart!'),
+                            duration: Duration(seconds: 2),
                           ),
                         );
                       }
