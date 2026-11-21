@@ -31,12 +31,22 @@ class _ProductListScreenState
   void initState() {
     super.initState();
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent - 200) {
-        context.read<ProductProvider>().loadMoreProducts();
-      }
+    _scrollController.addListener(_onScroll);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      context.read<ProductProvider>().loadCategories();
     });
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      context.read<ProductProvider>().loadMoreProducts();
+    }
   }
 
   void _onSearchChanged(String query) {
@@ -52,10 +62,22 @@ class _ProductListScreenState
     );
   }
 
+  void _onCategoryChanged(String? category) {
+    _debounce?.cancel();
+    _searchController.clear();
+
+    context.read<ProductProvider>().selectCategory(
+          category == null || category.isEmpty
+              ? null
+              : category,
+        );
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
     _searchController.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -117,11 +139,102 @@ class _ProductListScreenState
           ),
         ),
       ),
-      body: _buildBody(provider),
+      body: Column(
+        children: [
+          _buildFilterControls(provider),
+          Expanded(
+            child: _buildProducts(provider),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildBody(ProductProvider provider) {
+  Widget _buildFilterControls(ProductProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: provider.selectedCategory ?? '',
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Category',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+              ),
+              items: [
+                const DropdownMenuItem<String>(
+                  value: '',
+                  child: Text('All Categories'),
+                ),
+                ...provider.categories.map(
+                  (category) => DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(
+                      category,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              ],
+              onChanged: provider.isLoadingCategories
+                  ? null
+                  : _onCategoryChanged,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: provider.sortOption,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Sort by',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 12,
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'none',
+                  child: Text('Default'),
+                ),
+                DropdownMenuItem(
+                  value: 'priceLow',
+                  child: Text('Price: Low to High'),
+                ),
+                DropdownMenuItem(
+                  value: 'priceHigh',
+                  child: Text('Price: High to Low'),
+                ),
+                DropdownMenuItem(
+                  value: 'ratingHigh',
+                  child: Text('Rating: High to Low'),
+                ),
+                DropdownMenuItem(
+                  value: 'ratingLow',
+                  child: Text('Rating: Low to High'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  provider.changeSortOption(value);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProducts(ProductProvider provider) {
     if ((provider.isLoading || provider.isSearching) &&
         provider.products.isEmpty) {
       return const Center(
@@ -132,16 +245,22 @@ class _ProductListScreenState
     if (provider.errorMessage != null &&
         provider.products.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(provider.errorMessage!),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () => provider.retry(),
-              child: const Text('Retry'),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                provider.errorMessage!,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: provider.retry,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -177,7 +296,7 @@ class _ProductListScreenState
         if (provider.paginationError != null) {
           return Center(
             child: TextButton(
-              onPressed: () => provider.retryLoadMore(),
+              onPressed: provider.retryLoadMore,
               child: const Text('Failed to load. Retry'),
             ),
           );

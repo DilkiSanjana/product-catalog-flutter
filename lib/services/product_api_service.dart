@@ -12,14 +12,7 @@ class ProductApiService {
   ProductApiService({http.Client? client})
       : client = client ?? http.Client();
 
-  Future<Map<String, dynamic>> fetchProducts({
-    int limit = 10,
-    int skip = 0,
-  }) async {
-    final uri = Uri.parse(
-      '$_baseUrl/products?limit=$limit&skip=$skip',
-    );
-
+  Future<Map<String, dynamic>> _get(Uri uri) async {
     try {
       final response = await client
           .get(uri)
@@ -36,7 +29,7 @@ class ProductApiService {
       }
 
       throw Exception(
-        'Failed to load products. Status: ${response.statusCode}',
+        'Request failed. Status: ${response.statusCode}',
       );
     } on TimeoutException {
       throw Exception('Request timed out. Please try again.');
@@ -47,6 +40,64 @@ class ProductApiService {
     }
   }
 
+  Future<Map<String, dynamic>> fetchProducts({
+    int limit = 10,
+    int skip = 0,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/products?limit=$limit&skip=$skip',
+    );
+
+    return _get(uri);
+  }
+
+  Future<Map<String, dynamic>> fetchProductsByCategory({
+    required String category,
+    int limit = 10,
+    int skip = 0,
+  }) {
+    final uri = Uri.parse(
+      '$_baseUrl/products/category/${Uri.encodeComponent(category)}',
+    ).replace(
+      queryParameters: {
+        'limit': '$limit',
+        'skip': '$skip',
+      },
+    );
+
+    return _get(uri);
+  }
+
+  Future<List<String>> fetchCategories() async {
+      final uri = Uri.parse('$_baseUrl/products/category-list');
+
+  try {
+    final response = await client
+        .get(uri)
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data is List) {
+        return data.map((item) => item.toString()).toList();
+      }
+
+      throw const FormatException('Invalid category response');
+    }
+
+    throw Exception(
+      'Failed to load categories. Status: ${response.statusCode}',
+    );
+  } on TimeoutException {
+    throw Exception('Request timed out. Please try again.');
+  } on http.ClientException {
+    throw Exception('Network connection failed. Please try again.');
+  } on FormatException {
+    throw Exception('Invalid category response.');
+  }
+  }
+
   Future<Map<String, dynamic>> searchProducts(
     String query,
   ) async {
@@ -54,61 +105,13 @@ class ProductApiService {
       queryParameters: {'q': query},
     );
 
-    try {
-      final response = await client
-          .get(uri)
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        if (data is Map<String, dynamic>) {
-          return data;
-        }
-
-        throw const FormatException('Invalid API response');
-      }
-
-      throw Exception(
-        'Search failed. Status: ${response.statusCode}',
-      );
-    } on TimeoutException {
-      throw Exception('Search request timed out. Please try again.');
-    } on http.ClientException {
-      throw Exception('Network connection failed. Please try again.');
-    } on FormatException {
-      throw Exception('Invalid search response.');
-    }
+    return _get(uri);
   }
 
-  Future<Map<String, dynamic>> fetchProductById(int id) async {
+  Future<Map<String, dynamic>> fetchProductById(int id) {
     final uri = Uri.parse('$_baseUrl/products/$id');
 
-    try {
-      final response = await client
-          .get(uri)
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        if (data is Map<String, dynamic>) {
-          return data;
-        }
-
-        throw const FormatException('Invalid product response');
-      }
-
-      throw Exception(
-        'Failed to load product. Status: ${response.statusCode}',
-      );
-    } on TimeoutException {
-      throw Exception('Request timed out. Please try again.');
-    } on http.ClientException {
-      throw Exception('Network connection failed. Please try again.');
-    } on FormatException {
-      throw Exception('Invalid product response.');
-    }
+    return _get(uri);
   }
 
   void dispose() {
