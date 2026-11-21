@@ -8,6 +8,8 @@ import '../providers/product_provider.dart';
 import '../providers/cart_provider.dart';
 import '../widgets/product_card.dart';
 import 'cart_screen.dart';
+import '../providers/favorite_provider.dart';
+import 'favorites_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -90,25 +92,48 @@ class _ProductListScreenState
       appBar: AppBar(
         title: const Text('Product Catalog'),
         actions: [
-          Consumer<CartProvider>(
-            builder: (context, cartProvider, child) {
-              return IconButton(
-                icon: Badge(
-                  label: Text('${cartProvider.itemCount}'),
-                  isLabelVisible: cartProvider.itemCount > 0,
-                  child: const Icon(Icons.shopping_cart),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const CartScreen(),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+          // Favorites button
+  Consumer<FavoriteProvider>(
+    builder: (context, favoriteProvider, child) {
+      return IconButton(
+        tooltip: 'My Favorites',
+        icon: Badge(
+          label: Text('${favoriteProvider.favoriteCount}'),
+          isLabelVisible: favoriteProvider.favoriteCount > 0,
+          child: const Icon(Icons.favorite),
+        ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const FavoritesScreen(),
+            ),
+          );
+        },
+      );
+    },
+  ),
+
+  // Shopping cart button
+  Consumer<CartProvider>(
+    builder: (context, cartProvider, child) {
+      return IconButton(
+        icon: Badge(
+          label: Text('${cartProvider.itemCount}'),
+          isLabelVisible: cartProvider.itemCount > 0,
+          child: const Icon(Icons.shopping_cart),
+        ),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CartScreen(),
+            ),
+          );
+        },
+      );
+    },
+  ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(65),

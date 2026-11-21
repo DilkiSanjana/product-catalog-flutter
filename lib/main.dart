@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/product_provider.dart';
+import 'providers/cart_provider.dart';
+import 'providers/favorite_provider.dart';
+
 import 'repositories/product_repository.dart';
 import 'services/product_api_service.dart';
+
 import 'screens/product_list_screen.dart';
-import 'providers/cart_provider.dart';
 
 void main() {
   final apiService = ProductApiService();
+
   final repository = ProductRepository(
     apiService: apiService,
   );
@@ -22,8 +26,13 @@ void main() {
             repository: repository,
           )..loadInitialProducts(),
         ),
+
         ChangeNotifierProvider(
           create: (_) => CartProvider()..loadCart(),
+        ),
+
+        ChangeNotifierProvider(
+          create: (_) => FavoriteProvider()..loadFavorites(),
         ),
       ],
       child: const MyApp(),

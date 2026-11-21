@@ -1,8 +1,10 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/product.dart';
+import '../providers/favorite_provider.dart';
 import '../screens/product_detail_screen.dart';
 
 class ProductCard extends StatelessWidget {
@@ -33,18 +35,58 @@ class ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: CachedNetworkImage(
-                imageUrl: product.thumbnail,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(),
-                ),
-                errorWidget: (context, url, error) => const Center(
-                  child: Icon(Icons.image_not_supported),
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: product.thumbnail,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) =>
+                        const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                    errorWidget: (context, url, error) =>
+                        const Center(
+                      child: Icon(Icons.image_not_supported),
+                    ),
+                  ),
+
+                  // Favorite button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Consumer<FavoriteProvider>(
+                      builder: (context, favoriteProvider, child) {
+                        final isFavorite =
+                            favoriteProvider.isFavorite(product.id);
+
+                        return Material(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              color: isFavorite
+                                  ? Colors.red
+                                  : Colors.grey.shade700,
+                            ),
+                            tooltip: isFavorite
+                                ? 'Remove from favorites'
+                                : 'Add to favorites',
+                            onPressed: () {
+                              favoriteProvider.toggleFavorite(product);
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
