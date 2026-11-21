@@ -90,18 +90,27 @@ class _ProductListScreenState
         childAspectRatio: 0.68,
       ),
       itemCount: provider.products.length +
-          (provider.isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= provider.products.length) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-
+          (provider.isLoadingMore || provider.paginationError != null ? 1 : 0),
+      itemBuilder: (context, index) { 
+        if (index < provider.products.length) {
         return ProductCard(
           product: provider.products[index],
         );
-      },
+      }
+
+      if (provider.paginationError != null) {
+        return Center(
+          child: TextButton(
+            onPressed: () => provider.retryLoadMore(),
+            child: const Text('Failed to load. Retry'),
+          ),
+        );
+      }
+
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    },
     );
   }
 }

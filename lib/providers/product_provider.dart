@@ -13,7 +13,9 @@ class ProductProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
+
   String? _errorMessage;
+  String? _paginationError;
 
   int _total = 0;
   int _skip = 0;
@@ -21,30 +23,31 @@ class ProductProvider extends ChangeNotifier {
   static const int _pageSize = 10;
 
   List<Product> get products => _products;
-
   bool get isLoading => _isLoading;
-
   bool get isLoadingMore => _isLoadingMore;
 
   String? get errorMessage => _errorMessage;
+  String? get paginationError => _paginationError;
 
   bool get hasMore => _products.length < _total;
 
   Future<void> loadInitialProducts() async {
     _isLoading = true;
     _errorMessage = null;
+    _paginationError = null;
     _skip = 0;
     _products = [];
+
     notifyListeners();
 
     try {
-      final data = await repository.getProducts(
+      final page = await repository.getProducts(
         limit: _pageSize,
-        skip: _skip,
+        skip: 0,
       );
 
-      _products = data;
-      _total = data.length == _pageSize ? 194 : data.length;
+      _products = page.products;
+      _total = page.total;
       _skip = _products.length;
     } catch (error) {
       _errorMessage = error.toString();
@@ -60,18 +63,21 @@ class ProductProvider extends ChangeNotifier {
     }
 
     _isLoadingMore = true;
+    _paginationError = null;
+
     notifyListeners();
 
     try {
-      final newProducts = await repository.getProducts(
+      final page = await repository.getProducts(
         limit: _pageSize,
         skip: _skip,
       );
 
-      _products = [..._products, ...newProducts];
+      _products = [..._products, ...page.products];
+      _total = page.total;
       _skip = _products.length;
     } catch (error) {
-      _errorMessage = error.toString();
+      _paginationError = error.toString();
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -80,5 +86,9 @@ class ProductProvider extends ChangeNotifier {
 
   Future<void> retry() async {
     await loadInitialProducts();
+  }
+
+  Future<void> retryLoadMore() async {
+    await loadMoreProducts();
   }
 }
