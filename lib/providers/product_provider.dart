@@ -13,9 +13,12 @@ class ProductProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  bool _isSearching = false;
 
   String? _errorMessage;
   String? _paginationError;
+
+  String _searchQuery = '';
 
   int _total = 0;
   int _skip = 0;
@@ -23,15 +26,20 @@ class ProductProvider extends ChangeNotifier {
   static const int _pageSize = 10;
 
   List<Product> get products => _products;
+
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
+  bool get isSearching => _isSearching;
 
   String? get errorMessage => _errorMessage;
   String? get paginationError => _paginationError;
 
-  bool get hasMore => _products.length < _total;
+  String get searchQuery => _searchQuery;
+
+  bool get hasMore => _searchQuery.isEmpty && _products.length < _total;
 
   Future<void> loadInitialProducts() async {
+    _searchQuery = '';
     _isLoading = true;
     _errorMessage = null;
     _paginationError = null;
@@ -84,8 +92,41 @@ class ProductProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> searchProducts(String query) async {
+    _searchQuery = query.trim();
+
+    if (_searchQuery.isEmpty) {
+      await loadInitialProducts();
+      return;
+    }
+
+    _isSearching = true;
+    _errorMessage = null;
+    _paginationError = null;
+    _products = [];
+
+    notifyListeners();
+
+    try {
+      final results = await repository.searchProducts(_searchQuery);
+
+      _products = results;
+      _total = results.length;
+      _skip = results.length;
+    } catch (error) {
+      _errorMessage = error.toString();
+    } finally {
+      _isSearching = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> retry() async {
-    await loadInitialProducts();
+    if (_searchQuery.isNotEmpty) {
+      await searchProducts(_searchQuery);
+    } else {
+      await loadInitialProducts();
+    }
   }
 
   Future<void> retryLoadMore() async {

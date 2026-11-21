@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/product_provider.dart';
 import '../widgets/product_card.dart';
+import 'dart:async';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -18,6 +19,13 @@ class _ProductListScreenState
   final ScrollController _scrollController =
       ScrollController();
 
+  final TextEditingController _searchController =
+    TextEditingController();
+
+  Timer? _debounce;
+
+  
+
   @override
   void initState() {
     super.initState();
@@ -31,26 +39,50 @@ class _ProductListScreenState
   }
 
   @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
+  void dispose() {_debounce?.cancel();
+  _searchController.dispose();
+  _scrollController.dispose();
+  super.dispose();}
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProductProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Product Catalog'),
-        centerTitle: true,
+      appBar: AppBar(title: const Text('Product Catalog'),
+  centerTitle: true,
+  bottom: PreferredSize(
+    preferredSize: const Size.fromHeight(65),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: TextField(
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        decoration: InputDecoration(
+          hintText: 'Search products...',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: () {
+              _searchController.clear();
+              _onSearchChanged('');
+            },
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+        ),
       ),
+    ),
+  ),),
       body: _buildBody(provider),
     );
   }
 
   Widget _buildBody(ProductProvider provider) {
-    if (provider.isLoading && provider.products.isEmpty) {
+    if ((provider.isLoading || provider.isSearching) &&
+    provider.products.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(),
       );
@@ -111,6 +143,18 @@ class _ProductListScreenState
         child: CircularProgressIndicator(),
       );
     },
+    );
+  }
+  void _onSearchChanged(String query) {
+  _debounce?.cancel();
+
+  _debounce = Timer(
+    const Duration(milliseconds: 500),
+    () {
+      if (!mounted) return;
+
+      context.read<ProductProvider>().searchProducts(query);
+      },
     );
   }
 }
