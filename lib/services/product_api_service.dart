@@ -1,5 +1,7 @@
 
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 class ProductApiService {
@@ -36,6 +38,8 @@ class ProductApiService {
       throw Exception(
         'Failed to load products. Status: ${response.statusCode}',
       );
+    } on TimeoutException {
+      throw Exception('Request timed out. Please try again.');
     } on http.ClientException {
       throw Exception('Network connection failed. Please try again.');
     } on FormatException {
@@ -68,6 +72,8 @@ class ProductApiService {
       throw Exception(
         'Search failed. Status: ${response.statusCode}',
       );
+    } on TimeoutException {
+      throw Exception('Search request timed out. Please try again.');
     } on http.ClientException {
       throw Exception('Network connection failed. Please try again.');
     } on FormatException {
@@ -96,6 +102,8 @@ class ProductApiService {
       throw Exception(
         'Failed to load product. Status: ${response.statusCode}',
       );
+    } on TimeoutException {
+      throw Exception('Request timed out. Please try again.');
     } on http.ClientException {
       throw Exception('Network connection failed. Please try again.');
     } on FormatException {
