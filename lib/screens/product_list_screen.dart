@@ -201,89 +201,107 @@ class _ProductListScreenState
     );
   }
 
-  Widget _buildFilterControls(ProductProvider provider) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: provider.selectedCategory ?? '',
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
-                ),
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: '',
-                  child: Text('All Categories'),
-                ),
-                ...provider.categories.map(
-                  (category) => DropdownMenuItem<String>(
-                    value: category,
-                    child: Text(
-                      category,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-              onChanged: provider.isLoadingCategories
-                  ? null
-                  : _onCategoryChanged,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: provider.sortOption,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Sort by',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 12,
-                ),
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: 'none',
-                  child: Text('Default'),
-                ),
-                DropdownMenuItem(
-                  value: 'priceLow',
-                  child: Text('Price: Low to High'),
-                ),
-                DropdownMenuItem(
-                  value: 'priceHigh',
-                  child: Text('Price: High to Low'),
-                ),
-                DropdownMenuItem(
-                  value: 'ratingHigh',
-                  child: Text('Rating: High to Low'),
-                ),
-                DropdownMenuItem(
-                  value: 'ratingLow',
-                  child: Text('Rating: Low to High'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) {
-                  provider.changeSortOption(value);
-                }
-              },
-            ),
-          ),
-        ],
+  Widget _buildFilterControls(ProductProvider provider) {Widget categoryDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: provider.selectedCategory ?? '',
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Category',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
       ),
+      items: [
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('All Categories'),
+        ),
+        ...provider.categories.map(
+          (category) => DropdownMenuItem<String>(
+            value: category,
+            child: Text(
+              category,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
+      onChanged: provider.isLoadingCategories
+          ? null
+          : _onCategoryChanged,
     );
   }
+
+  Widget sortDropdown() {
+    return DropdownButtonFormField<String>(
+      initialValue: provider.sortOption,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Sort by',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
+      ),
+      items: const [
+        DropdownMenuItem(
+          value: 'none',
+          child: Text('Default'),
+        ),
+        DropdownMenuItem(
+          value: 'priceLow',
+          child: Text('Price: Low to High'),
+        ),
+        DropdownMenuItem(
+          value: 'priceHigh',
+          child: Text('Price: High to Low'),
+        ),
+        DropdownMenuItem(
+          value: 'ratingHigh',
+          child: Text('Rating: High to Low'),
+        ),
+        DropdownMenuItem(
+          value: 'ratingLow',
+          child: Text('Rating: Low to High'),
+        ),
+      ],
+      onChanged: (value) {
+        if (value != null) {
+          provider.changeSortOption(value);
+        }
+      },
+    );
+  }
+
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 500) {
+          // Mobile: show dropdowns vertically.
+          return Column(
+            children: [
+              categoryDropdown(),
+              const SizedBox(height: 10),
+              sortDropdown(),
+            ],
+          );
+        }
+
+        // Larger screens: show dropdowns side by side.
+        return Row(
+          children: [
+            Expanded(child: categoryDropdown()),
+            const SizedBox(width: 10),
+            Expanded(child: sortDropdown()),
+          ],
+        );
+      },
+    ),
+  );}
 
   Widget _buildProducts(ProductProvider provider) {
     if ((provider.isLoading || provider.isSearching) &&
