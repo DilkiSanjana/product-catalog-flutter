@@ -79,15 +79,23 @@ test/
 - **Screens:** Contain the main application pages.
 - **Widgets:** Contain reusable UI components.
 
-## State Management
+## State Management Choice & Justification
 
-This project uses the Provider package with ChangeNotifier.
+This project uses **Provider** (`ChangeNotifierProvider` and `Consumer`) for state management.
 
-Provider was selected because it offers a straightforward way to manage and share application state across widgets.
+While the assignment allowed **Provider**, **Riverpod**, or **Bloc**, Provider was selected based on the following architectural trade-offs:
 
-The application uses:
-- `ProductProvider` to manage product loading, pagination, and search.
-- `CartProvider` to manage shopping cart items, quantities, and totals.
+1. **Appropriate Complexity for App Scope**:
+   - **vs. BLoC**: BLoC enforces a strict event-driven, unidirectional stream architecture. While ideal for large-scale enterprise applications with large distributed teams, it introduces considerable boilerplate (separate Event, State, and Bloc classes for basic operations like toggling favorites or updating item quantity). Provider delivers clear separation of concerns with minimal boilerplate.
+   - **vs. Riverpod**: Riverpod offers compile-time safety and independence from `BuildContext`, but introduces additional conceptual abstractions. Provider remains a robust, battle-tested, and officially endorsed starting point by Flutter, providing the exact balance of simplicity and structure needed for this project.
+
+2. **Testability & Separation of Concerns**:
+   - Business logic is kept completely independent of the UI layer. By injecting the `ProductRepository` into `ProductProvider` via constructor injection (`ProductProvider(repository: repository)`), the logic can be isolated and mocked easily in unit tests.
+   - Domain states are cleanly decoupled into dedicated providers with single responsibilities:
+     - `ProductProvider`: Handles product fetching, pagination, category filtering, search debounce, and sorting.
+     - `CartProvider`: Manages shopping cart items, quantity manipulation, total calculations, and persistence.
+     - `FavoriteProvider`: Tracks saved favorite items and manages local persistence.
+     - `ThemeProvider`: Controls light and dark mode toggling and preference persistence.
 
 ## API Integration
 
@@ -181,6 +189,14 @@ To check the project for potential errors and code issues, run:
 ```bash
 flutter analyze
 ```
+## Known Limits
+
+- **Search pagination**: Search results are loaded all at once from the API and do not support incremental pagination (load more). Only the main product listing uses pagination.
+- **Category + search filtering**: When a category is selected and the user searches, the search is performed globally and then filtered client-side by category. This may miss products if the search result set is capped by the API.
+- **Offline cache scope**: The offline cache stores only the products loaded during the current or previous session. Products from later pages (loaded via "load more") are appended to the cache, but category-filtered or search results are not cached.
+- **No checkout flow**: The cart shows a running total but has no payment or order-placement feature — it is a display-only cart.
+- **iOS not tested**: The app targets Android. It may work on iOS but has not been tested on an iOS device or simulator.
+
 ## License
 
 This project was developed as part of a Flutter Developer internship assignment.
