@@ -3,9 +3,12 @@ import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
 import '../repositories/product_repository.dart';
+import '../services/product_cache_service.dart';
 
 class ProductProvider extends ChangeNotifier {
   final ProductRepository repository;
+
+  final ProductCacheService _cacheService = ProductCacheService();
 
   ProductProvider({required this.repository});
 
@@ -16,6 +19,7 @@ class ProductProvider extends ChangeNotifier {
   bool _isLoadingMore = false;
   bool _isSearching = false;
   bool _isLoadingCategories = false;
+  bool _isOfflineData = false;
 
   String? _errorMessage;
   String? _paginationError;
@@ -69,6 +73,7 @@ class ProductProvider extends ChangeNotifier {
   bool get isLoadingMore => _isLoadingMore;
   bool get isSearching => _isSearching;
   bool get isLoadingCategories => _isLoadingCategories;
+  bool get isOfflineData => _isOfflineData;
 
   String? get errorMessage => _errorMessage;
   String? get paginationError => _paginationError;
@@ -80,8 +85,7 @@ class ProductProvider extends ChangeNotifier {
   String get sortOption => _sortOption;
 
   bool get hasMore =>
-      _products.length < _total &&
-      !_isSearching;
+      _products.length < _total && !_isSearching;
 
   // Load available categories.
   Future<void> loadCategories() async {
@@ -119,6 +123,7 @@ class ProductProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _paginationError = null;
+    _isOfflineData = false;
     _skip = 0;
     _total = 0;
     _products = [];
@@ -140,8 +145,35 @@ class ProductProvider extends ChangeNotifier {
       _products = page.products;
       _total = page.total;
       _skip = _products.length;
+
+      // Save the default product catalog for offline use.
+      if (_selectedCategory == null && _products.isNotEmpty) {
+        await _cacheService.saveProducts(
+          _products,
+          total: _total,
+        );
+      }
     } catch (error) {
-      _errorMessage = error.toString();
+      // Use cached products if the default catalog cannot load.
+      if (_selectedCategory == null) {
+        try {
+          final cachedData = await _cacheService.loadProducts();
+
+          if (cachedData != null) {
+            _products = cachedData.products;
+            _total = cachedData.total;
+            _skip = _products.length;
+            _isOfflineData = true;
+            _errorMessage = null;
+          } else {
+            _errorMessage = error.toString();
+          }
+        } catch (cacheError) {
+          _errorMessage = error.toString();
+        }
+      } else {
+        _errorMessage = error.toString();
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -150,7 +182,7 @@ class ProductProvider extends ChangeNotifier {
 
   // Load the next page.
   Future<void> loadMoreProducts() async {
-    if (_isLoading || _isLoadingMore || !hasMore) {
+    if (_isLoading || _isLoadingMore || !hasMore || _isOfflineData) {
       return;
     }
 
@@ -174,6 +206,14 @@ class ProductProvider extends ChangeNotifier {
       _products = [..._products, ...page.products];
       _total = page.total;
       _skip = _products.length;
+
+      // Update the cache with all loaded default catalog products.
+      if (_selectedCategory == null) {
+        await _cacheService.saveProducts(
+          _products,
+          total: _total,
+        );
+      }
     } catch (error) {
       _paginationError = error.toString();
     } finally {
@@ -192,6 +232,7 @@ class ProductProvider extends ChangeNotifier {
     }
 
     _isSearching = true;
+    _isOfflineData = false;
     _errorMessage = null;
     _paginationError = null;
     _products = [];
