@@ -5,11 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:product_catalog/models/product.dart';
+import 'package:product_catalog/providers/cart_provider.dart';
 import 'package:product_catalog/providers/favorite_provider.dart';
 import 'package:product_catalog/widgets/product_card.dart';
 import 'package:product_catalog/screens/product_detail_screen.dart';
 
-/// Wraps [child] with the providers required by [ProductCard].
+/// Wraps [child] with all providers required by [ProductCard] and [ProductDetailScreen].
 Widget buildTestableWidget(Widget child) {
   SharedPreferences.setMockInitialValues({});
 
@@ -17,6 +18,9 @@ Widget buildTestableWidget(Widget child) {
     providers: [
       ChangeNotifierProvider(
         create: (_) => FavoriteProvider(),
+      ),
+      ChangeNotifierProvider(
+        create: (_) => CartProvider(),
       ),
     ],
     child: MaterialApp(
@@ -91,7 +95,9 @@ void main() {
       );
 
       await tester.tap(find.byType(ProductCard));
-      await tester.pumpAndSettle();
+      // Pump past navigation transition without pumpAndSettle (avoids infinite animation from CircularProgressIndicator)
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
 
       // ProductDetailScreen should now be on screen.
       expect(find.byType(ProductDetailScreen), findsOneWidget);
