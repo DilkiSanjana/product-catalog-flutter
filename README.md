@@ -67,7 +67,9 @@ lib/
 
 test/
 ├── product_test.dart
-└── cart_provider_test.dart
+├── cart_provider_test.dart
+├── product_provider_test.dart
+└── product_card_test.dart
 ```
 
 ### Architecture Explanation
@@ -173,14 +175,32 @@ Run the automated tests using:
 flutter test
 ```
 
-The project includes tests for:
+The project includes comprehensive automated tests covering unit and widget layers:
 
-- Product model JSON parsing.
-- Product default values.
-- Adding products to the cart.
-- Increasing product quantity.
-- Calculating cart totals.
-- Removing products from the cart.
+### Unit Tests
+- **Product Model (`test/product_test.dart`)**:
+  - JSON deserialization from API format.
+  - Handling missing optional fields with sensible defaults.
+- **Cart Provider (`test/cart_provider_test.dart`)**:
+  - Adding products to the cart.
+  - Increasing quantity on subsequent additions.
+  - Correct total price calculation.
+  - Removing products from the cart.
+- **Product Provider (`test/product_provider_test.dart`)**:
+  - Initial state verification.
+  - Loading initial products and setting loading/error states.
+  - Sorting (price low/high, rating low/high).
+  - Search filtering and restoring full product list.
+  - Retry logic for initial load and search.
+  - Category selection and resetting.
+  - `hasMore` pagination flag accuracy.
+
+### Widget Tests
+- **Product Card (`test/product_card_test.dart`)**:
+  - Renders product title and formatted price.
+  - Renders star rating value and icon.
+  - Tapping product card navigates to `ProductDetailScreen`.
+  - Tapping favorite button updates UI icon state.
 
 ## Code Analysis
 
